@@ -23,14 +23,19 @@ func main() {
 		os.Exit(1)
 	}
 
-	conn, err := l.Accept()
-	if err != nil {
-		fmt.Println("Error accepting connection: ", err.Error())
-		os.Exit(1)
+	for {
+		conn, err := l.Accept()
+		if err != nil {
+			fmt.Println("Error accepting connection: ", err.Error())
+			os.Exit(1)
+		}
+		go handleRequest(conn) //"go" so while one connection is being processed, the server can accept and process additional connections without waiting for the first one to complete.
 	}
+}
 
-	// conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
-
+// conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
+func handleRequest(conn net.Conn) {
+	defer conn.Close() //conn.Close() will be called automatically when the function below finishes (defer function) => connection will be closed when response is sent, prevent loading on the browser (if not, client might not know if when response is completed, so keep loading)
 	req := make([]byte, 1024)
 	n, err := conn.Read(req) //n is the number of bytes need
 	if err != nil {
@@ -60,12 +65,9 @@ func main() {
 		response = "HTTP/1.1 404 Not Found\r\n\r\n"
 	}
 
-	fmt.Println(response)
-
 	_, err = conn.Write([]byte(response))
 	if err != nil {
 		fmt.Println("Error sending response to client", err.Error())
 		os.Exit(1)
 	}
-
 }
