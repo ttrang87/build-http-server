@@ -29,7 +29,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
+	// conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
 
 	req := make([]byte, 1024)
 	n, err := conn.Read(req) //n is the number of bytes need
@@ -46,9 +46,21 @@ func main() {
 	} else if strings.HasPrefix(path, "/echo") {
 		text := path[6:]                                                                                                       // from req, "/echo/abc" => text = abc (from index 6)
 		response = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(text), text) // khớp value sau vào những ký hiệu %, &d for interger, %s for string and %f for float. Trả về string
+	} else if path == "/user-agent" {
+		lines := strings.Split(message, "\r\n") // khong the dung index cu the vi trong 1 request co the co nhieu thanh phan khac
+		var userAgent string
+		for _, line := range lines {
+			if strings.HasPrefix(line, "User-Agent: ") {
+				userAgent = strings.TrimPrefix(line, "User-Agent: ")
+				break
+			}
+		}
+		response = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(userAgent), userAgent)
 	} else {
 		response = "HTTP/1.1 404 Not Found\r\n\r\n"
 	}
+
+	fmt.Println(response)
 
 	_, err = conn.Write([]byte(response))
 	if err != nil {
