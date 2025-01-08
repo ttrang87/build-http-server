@@ -43,6 +43,7 @@ func handleRequest(conn net.Conn) {
 		os.Exit(1)
 	}
 	message := string(req[:n])
+	lines := strings.Split(message, "\r\n") // khong the dung index cu the vi trong 1 request co the co nhieu thanh phan khac
 	request := strings.Split(message, " ")
 	path := request[1] // split by space and extract second elenment (index 1)
 	response := ""
@@ -50,10 +51,24 @@ func handleRequest(conn net.Conn) {
 	if path == "/" {
 		response = "HTTP/1.1 200 OK\r\n\r\n"
 	} else if strings.HasPrefix(path, "/echo") {
-		text := path[6:]                                                                                                       // from req, "/echo/abc" => text = abc (from index 6)
-		response = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(text), text) // khớp value sau vào những ký hiệu %, &d for interger, %s for string and %f for float. Trả về string
+		echoStr := strings.TrimPrefix(path, "/echo/")
+		hasEncoding := false
+		for _, line := range lines {
+			if strings.HasPrefix(line, "Accept-Encoding: ") {
+				encode := strings.TrimPrefix(line, "Accept-Encoding: ")
+				if strings.Contains(encode, "gzip") {
+					hasEncoding = true
+					response = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Encoding: gzip\r\nContent-Length: %d\r\n\r\n%s", len(echoStr), echoStr)
+					break
+				}
+			}
+		}
+		if !hasEncoding {
+			response = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(echoStr), echoStr)
+		}
+		// text := path[6:]                                                                                                       // from req, "/echo/abc" => text = abc (from index 6)
+		// response = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(text), text) // khớp value sau vào những ký hiệu %, &d for interger, %s for string and %f for float. Trả về string
 	} else if path == "/user-agent" {
-		lines := strings.Split(message, "\r\n") // khong the dung index cu the vi trong 1 request co the co nhieu thanh phan khac
 		var userAgent string
 		for _, line := range lines {
 			if strings.HasPrefix(line, "User-Agent: ") {
@@ -66,7 +81,6 @@ func handleRequest(conn net.Conn) {
 		fileName := strings.TrimPrefix(path, "/files/")
 		dir := os.Args[2]
 		if request[0] == "POST" {
-			lines := strings.Split(message, "\r\n")
 			file, _ := os.Create(dir + fileName)
 			file.WriteString(lines[len(lines)-1])
 			response = "HTTP/1.1 201 Created\r\n\r\n"
