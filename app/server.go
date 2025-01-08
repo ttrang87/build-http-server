@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
 	"fmt"
 	"net"
 	"os"
@@ -57,8 +59,13 @@ func handleRequest(conn net.Conn) {
 			if strings.HasPrefix(line, "Accept-Encoding: ") {
 				encode := strings.TrimPrefix(line, "Accept-Encoding: ")
 				if strings.Contains(encode, "gzip") {
+					var buffer bytes.Buffer        //store the compressed data
+					enc := gzip.NewWriter(&buffer) // Creates a writer to compress data into the response, (x) x is output destination
+					enc.Write([]byte(echoStr))     //compresses the data and writes it to the buffer
+					enc.Close()                    //close to finalize the compression process
+					content := buffer.String()     // more efficient than string(buffer)
 					hasEncoding = true
-					response = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Encoding: gzip\r\nContent-Length: %d\r\n\r\n%s", len(echoStr), echoStr)
+					response = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Encoding: gzip\r\nContent-Length: %d\r\n\r\n%s", len(content), content)
 					break
 				}
 			}
