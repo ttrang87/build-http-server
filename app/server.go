@@ -43,7 +43,8 @@ func handleRequest(conn net.Conn) {
 		os.Exit(1)
 	}
 	message := string(req[:n])
-	path := strings.Split(message, " ")[1] // split by space and extract second elenment (index 1)
+	request := strings.Split(message, " ")
+	path := request[1] // split by space and extract second elenment (index 1)
 	response := ""
 
 	if path == "/" {
@@ -64,11 +65,18 @@ func handleRequest(conn net.Conn) {
 	} else if strings.HasPrefix(path, "/files/") {
 		fileName := strings.TrimPrefix(path, "/files/")
 		dir := os.Args[2]
-		data, err := os.ReadFile(dir + fileName)
-		if err != nil {
-			response = "HTTP/1.1 404 Not Found\r\n\r\n"
+		if request[0] == "POST" {
+			lines := strings.Split(message, "\r\n")
+			file, _ := os.Create(dir + fileName)
+			file.WriteString(lines[len(lines)-1])
+			response = "HTTP/1.1 201 Created\r\n\r\n"
 		} else {
-			response = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: %d\r\n\r\n%s", len(data), data)
+			data, err := os.ReadFile(dir + fileName)
+			if err != nil {
+				response = "HTTP/1.1 404 Not Found\r\n\r\n"
+			} else {
+				response = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: %d\r\n\r\n%s", len(data), data)
+			}
 		}
 	} else {
 		response = "HTTP/1.1 404 Not Found\r\n\r\n"
